@@ -1,12 +1,13 @@
-import amqp, { Channel, Connection } from 'amqplib';
+import * as amqp from 'amqplib';
 
 export class MessageBroker {
-    private connection?: Connection;
-    private channel?: Channel;
+    private connection?: any;
+    private channel?: any;
 
     async connect(url: string) {
         try {
             this.connection = await amqp.connect(url);
+            if (!this.connection) return;
             this.channel = await this.connection.createChannel();
             await this.channel.assertExchange('trade-events', 'topic', { durable: false });
             console.log('Connected to RabbitMQ');
