@@ -2,10 +2,48 @@
 
 A full-stack microservices backend for a stocks platform, built with Node.js, Express, TypeScript, Docker, Postgres, Redis, and RabbitMQ.
 
-## Services
+A full-stack microservices backend for a stocks platform, built with Node.js, Express, TypeScript, Docker, Postgres, Redis, and RabbitMQ.
 
-| Service | Port | DB | Responsibilities |
-|---------|------|----|------------------|
+## Architecture
+
+```mermaid
+graph TD
+    Client[Client / Postman] -->|HTTP| Gateway[API Gateway :8080]
+    
+    subgraph "Infrastructure"
+        R[Redis Cache]
+        MQ[RabbitMQ Event Bus]
+        DB[(Postgres DB)]
+    end
+
+    subgraph "Services"
+        Gateway -->|/auth| Auth[Auth Service :3001]
+        Gateway -->|/stocks| Stocks[Stocks Service :3002]
+        Gateway -->|/portfolio| Portfolio[Portfolio Service :3003]
+        
+        Auth -->|Read/Write| DB
+        
+        Stocks -->|Read/Write| DB
+        Stocks -->|Cache| R
+        
+        Portfolio -->|Read/Write| DB
+        Portfolio -->|Sync RPC| Stocks
+        Portfolio -->|Publish Trade| MQ
+    end
+```
+
+## Tech Stack & Decisions
+
+| Technology | Role | Why we chose it |
+|------------|------|-----------------|
+| **Node.js & Express** | Runtime & Framework | Event-driven architecture fits microservices perfectly. Lightweight and huge ecosystem. |
+| **TypeScript** | Language | Type safety is critical when sharing interfaces (`@stocks-app/common`) across services. Catches bugs at compile time. |
+| **Docker** | Containerization | Ensures consistent environments (Dev vs Prod). Easy to spin up the entire stack with one command. |
+| **Postgres** | Database | Reliable, ACID-compliant relational database. Easy to manage multiple logical databases for service isolation. |
+| **Prisma** | ORM | Best-in-class TypeScript support. Auto-generated types ensure DB queries match our code models. |
+| **Redis** | Caching | In-memory speed for the **Stocks Service**. Market data is read-heavy; caching reduces DB load and latency. |
+| **RabbitMQ** | Message Broker | Decouples services. The **Portfolio Service** publishes events (e.g., `TradeExecuted`) asynchronously, ensuring trade processing doesn't block notifications or analytics. |
+
 | **Gateway** | 8080 | - | Entry point, Auth verification, Routing |
 | **Auth** | 3001 | auth_db | User registration, Login (JWT) |
 | **Stocks** | 3002 | stocks_db | Stock management, Quotes, Caching (Redis) |
