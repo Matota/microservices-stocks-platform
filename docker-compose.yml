@@ -1,0 +1,120 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: stocks_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - stock-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: stocks_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - stock-network
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: stocks_rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - stock-network
+
+  auth-service:
+    build: 
+      context: .
+      dockerfile: auth-service/Dockerfile
+    container_name: auth-service
+    ports:
+      - "3001:3000"
+    environment:
+      - DATABASE_URL=postgresql://micro_user:micro_pass@postgres:5432/auth_db?schema=public
+      - JWT_SECRET=supersecretkey
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - stock-network
+
+  stocks-service:
+    build:
+      context: .
+      dockerfile: stocks-service/Dockerfile
+    container_name: stocks-service
+    ports:
+      - "3002:3000"
+    environment:
+      - DATABASE_URL=postgresql://micro_user:micro_pass@postgres:5432/stocks_db?schema=public
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    networks:
+      - stock-network
+
+  portfolio-service:
+    build:
+      context: .
+      dockerfile: portfolio-service/Dockerfile
+    container_name: portfolio-service
+    ports:
+      - "3003:3000"
+    environment:
+      - DATABASE_URL=postgresql://micro_user:micro_pass@postgres:5432/portfolio_db?schema=public
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+      - STOCKS_SERVICE_URL=http://stocks-service:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_started
+    networks:
+      - stock-network
+
+  gateway:
+    build:
+      context: .
+      dockerfile: gateway/Dockerfile
+    container_name: gateway
+    ports:
+      - "8080:8080"
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:3000
+      - STOCKS_SERVICE_URL=http://stocks-service:3000
+      - PORTFOLIO_SERVICE_URL=http://portfolio-service:3000
+      - JWT_SECRET=supersecretkey
+    depends_on:
+      - auth-service
+      - stocks-service
+      - portfolio-service
+    networks:
+      - stock-network
+
+networks:
+  stock-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

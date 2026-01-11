@@ -1,0 +1,146 @@
+{
+    "info": {
+        "name": "Stocks Microservices",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "item": [
+        {
+            "name": "Auth",
+            "item": [
+                {
+                    "name": "Register",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"email\": \"test@test.com\", \"password\": \"password123\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "http://localhost:8080/auth/register"
+                    }
+                },
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "var jsonData = pm.response.json();",
+                                    "pm.environment.set(\"token\", jsonData.token);"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"email\": \"test@test.com\", \"password\": \"password123\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "http://localhost:8080/auth/login"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Stocks",
+            "item": [
+                {
+                    "name": "Create Stock",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"symbol\": \"AAPL\", \"name\": \"Apple Inc.\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "http://localhost:8080/stocks"
+                    }
+                },
+                {
+                    "name": "Add Quote",
+                    "request": {
+                        "method": "POST",
+                        "header": [],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"price\": 150.50}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "http://localhost:8080/stocks/AAPL/quote"
+                    }
+                },
+                {
+                    "name": "Get Quote",
+                    "request": {
+                        "method": "GET",
+                        "header": [],
+                        "url": "http://localhost:8080/stocks/AAPL/quote"
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Portfolio",
+            "item": [
+                {
+                    "name": "Trade (Buy)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\"symbol\": \"AAPL\", \"shares\": 10, \"action\": \"BUY\"}",
+                            "options": {
+                                "raw": {
+                                    "language": "json"
+                                }
+                            }
+                        },
+                        "url": "http://localhost:8080/portfolio/trade"
+                    }
+                },
+                {
+                    "name": "Get Portfolio",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{token}}"
+                            }
+                        ],
+                        "url": "http://localhost:8080/portfolio"
+                    }
+                }
+            ]
+        }
+    ]
+}
